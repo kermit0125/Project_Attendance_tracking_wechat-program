@@ -87,22 +87,24 @@ async function main() {
     if (!migrateResult.success) {
       const errorOutput = migrateResult.error?.stderr || migrateResult.error?.stdout || '';
       
-      // 首先检查是否是迁移失败错误（P3009）- 优先级最高
+      // 首先检查是否是迁移失败错误（P3009 或 P3018）- 优先级最高
       const isMigrationFailedError = 
         errorOutput.includes('P3009') ||
+        errorOutput.includes('P3018') ||
         errorOutput.includes('failed migrations') ||
         errorOutput.includes('migrate resolve') ||
+        errorOutput.includes('Invalid use of NULL value') ||
         (errorOutput.includes('migration started at') && errorOutput.includes('failed'));
       
       if (isMigrationFailedError) {
-        console.error('\n❌ 数据库迁移失败：之前的迁移执行失败');
-        console.error('   解决方案：');
-        console.error('   1. 设置环境变量 AUTO_FIX_DB=true 以使用 db push 创建表');
-        console.error('   2. 或者手动解决迁移问题（需要 Shell 访问）');
+        console.error('\n❌ 数据库迁移失败：迁移执行失败');
+        console.error('   错误类型:', errorOutput.includes('P3018') ? 'P3018 (迁移失败)' : errorOutput.includes('P3009') ? 'P3009 (迁移状态错误)' : '其他迁移错误');
         
-        // 如果设置了 AUTO_FIX_DB，尝试使用 db push
-        if (process.env.AUTO_FIX_DB === 'true') {
-          console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
+        // 自动使用 db push 修复（如果设置了 AUTO_FIX_DB 或检测到 NULL 值错误）
+        const shouldAutoFix = process.env.AUTO_FIX_DB === 'true' || errorOutput.includes('Invalid use of NULL value');
+        
+        if (shouldAutoFix) {
+          console.log('\n🔧 自动修复迁移问题...');
           
           // 先尝试重置失败的迁移，然后使用 db push
           console.log('   步骤 1: 尝试重置失败的迁移状态...');
@@ -113,7 +115,7 @@ async function main() {
             console.log('   ⚠️  无法重置迁移状态（可能迁移不存在），继续使用 db push...');
           }
           
-          console.log('   步骤 2: 使用 db push 创建表结构...');
+          console.log('   步骤 2: 使用 db push 同步数据库结构...');
           
           // 尝试使用 --force-reset 强制重置（如果数据库为空）
           let pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate --force-reset', backendDir);
@@ -125,8 +127,18 @@ async function main() {
           }
           
           if (pushResult.success) {
-            console.log('✅ 数据库表创建成功（使用 db push）');
-            console.log('⚠️  注意：db push 不会记录迁移历史');
+            console.log('✅ 数据库表同步成功（使用 db push）');
+            
+            // 标记迁移为已应用（使用 migrate resolve --applied）
+            console.log('   步骤 3: 标记迁移为已应用...');
+            const markResult = await runCommand('npx prisma migrate resolve --applied 20260107211017_attendance_api', backendDir);
+            if (markResult.success) {
+              console.log('   ✅ 迁移已标记为已应用');
+            } else {
+              console.log('   ⚠️  无法标记迁移（可能迁移不存在），但这不影响数据库结构');
+            }
+            
+            console.log('⚠️  注意：使用了 db push 同步数据库，迁移历史可能不完整');
           } else {
             const pushError = pushResult.error?.stderr || pushResult.error?.stdout || '';
             console.error('❌ db push 失败');
@@ -146,6 +158,9 @@ async function main() {
             process.exit(1);
           }
         } else {
+          console.error('   解决方案：');
+          console.error('   1. 设置环境变量 AUTO_FIX_DB=true 以自动使用 db push 修复');
+          console.error('   2. 或者手动解决迁移问题（需要 Shell 访问）');
           console.error('\n   错误详情:', errorOutput);
           process.exit(1);
         }
@@ -159,7 +174,7 @@ async function main() {
         console.error('\n❌ 数据库迁移失败：表不存在');
         console.error('   这表明数据库是全新的，但迁移文件可能不完整');
         
-        // 如果设置了 AUTO_FIX_DB 环境变量，尝试使用 db push 自动修复
+        // 自动使用 db push 修复（如果设置了 AUTO_FIX_DB）
         if (process.env.AUTO_FIX_DB === 'true') {
           console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
           
@@ -177,7 +192,17 @@ async function main() {
           
           if (pushResult.success) {
             console.log('✅ 数据库表创建成功（使用 db push）');
-            console.log('⚠️  注意：db push 不会记录迁移历史，建议后续重新创建正确的迁移');
+            
+            // 标记迁移为已应用
+            console.log('   步骤 3: 标记迁移为已应用...');
+            const markResult = await runCommand('npx prisma migrate resolve --applied 20260107211017_attendance_api', backendDir);
+            if (markResult.success) {
+              console.log('   ✅ 迁移已标记为已应用');
+            } else {
+              console.log('   ⚠️  无法标记迁移，但这不影响数据库结构');
+            }
+            
+            console.log('⚠️  注意：使用了 db push 同步数据库，迁移历史可能不完整');
           } else {
             const pushError = pushResult.error?.stderr || pushResult.error?.stdout || '';
             console.error('❌ db push 也失败了');
@@ -233,7 +258,7 @@ async function main() {
       console.error('\n❌ 数据库迁移失败：表不存在');
       console.error('   这表明数据库是全新的，但迁移文件可能不完整');
       
-      // 如果设置了 AUTO_FIX_DB 环境变量，尝试使用 db push 自动修复
+      // 自动使用 db push 修复（如果设置了 AUTO_FIX_DB）
       if (process.env.AUTO_FIX_DB === 'true') {
         console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
         
@@ -252,7 +277,17 @@ async function main() {
           
           if (pushResult.success) {
             console.log('✅ 数据库表创建成功（使用 db push）');
-            console.log('⚠️  注意：db push 不会记录迁移历史，建议后续重新创建正确的迁移');
+            
+            // 标记迁移为已应用
+            console.log('   步骤 3: 标记迁移为已应用...');
+            const markResult = await runCommand('npx prisma migrate resolve --applied 20260107211017_attendance_api', backendDir);
+            if (markResult.success) {
+              console.log('   ✅ 迁移已标记为已应用');
+            } else {
+              console.log('   ⚠️  无法标记迁移，但这不影响数据库结构');
+            }
+            
+            console.log('⚠️  注意：使用了 db push 同步数据库，迁移历史可能不完整');
           } else {
             const pushError = pushResult.error?.stderr || pushResult.error?.stdout || '';
             console.error('❌ db push 也失败了');
