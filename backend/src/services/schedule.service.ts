@@ -185,7 +185,7 @@ export class ScheduleService {
       earlyLeaveGraceMinutes: schedule.earlyLeaveGraceMinutes,
       minWorkMinutes: schedule.minWorkMinutes,
       crossDay: schedule.crossDay,
-      createdAt: schedule.createdAt.toISOString(),
+      createdAt: schedule.createdAt?.toISOString() || new Date().toISOString(),
     };
   }
 

@@ -24,7 +24,7 @@ export class GeoFenceService {
       radiusM: f.radiusM,
       address: f.address,
       isActive: f.isActive,
-      createdAt: f.createdAt,
+      createdAt: f.createdAt || new Date(),
     }));
   }
 
@@ -58,7 +58,7 @@ export class GeoFenceService {
       radiusM: fence.radiusM,
       address: fence.address,
       isActive: fence.isActive,
-      createdAt: fence.createdAt,
+      createdAt: fence.createdAt || new Date(),
     };
   }
 
@@ -99,7 +99,7 @@ export class GeoFenceService {
       radiusM: updated.radiusM,
       address: updated.address,
       isActive: updated.isActive,
-      createdAt: updated.createdAt,
+      createdAt: updated.createdAt || new Date(),
     };
   }
 

@@ -91,8 +91,8 @@ export class AuthService {
         name: user.org.name,
       },
       roles,
-      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
-      updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
+      createdAt: user.createdAt ? (user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt) : new Date().toISOString(),
+      updatedAt: user.updatedAt ? (user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt) : new Date().toISOString(),
     };
   }
 }

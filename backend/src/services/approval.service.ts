@@ -99,7 +99,7 @@ export class ApprovalService {
           comment: a.comment,
           decidedAt: a.decidedAt instanceof Date ? a.decidedAt.toISOString() : a.decidedAt,
         })),
-        createdAt: request.createdAt instanceof Date ? request.createdAt.toISOString() : request.createdAt,
+        createdAt: request.createdAt ? (request.createdAt instanceof Date ? request.createdAt.toISOString() : request.createdAt) : new Date().toISOString(),
       };
     });
 

@@ -178,7 +178,7 @@ export class RequestService {
           endAt: r.endAt instanceof Date ? r.endAt.toISOString() : r.endAt,
           durationMinutes,
           approvedDurationMinutes: (r as any).approvedDurationMinutes ?? null, // 审批后实际批准的时长
-          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+          createdAt: r.createdAt ? (r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt) : new Date().toISOString(),
           approvals: r.approvals.map(a => ({
             stepNo: a.stepNo,
             approver: {
@@ -254,8 +254,8 @@ export class RequestService {
         mimeType: att.mimeType,
         fileSizeBytes: att.fileSizeBytes ? Number(att.fileSizeBytes) : null,
       })),
-      createdAt: request.createdAt instanceof Date ? request.createdAt.toISOString() : request.createdAt,
-      updatedAt: request.updatedAt instanceof Date ? request.updatedAt.toISOString() : request.updatedAt,
+      createdAt: request.createdAt ? (request.createdAt instanceof Date ? request.createdAt.toISOString() : request.createdAt) : new Date().toISOString(),
+      updatedAt: request.updatedAt ? (request.updatedAt instanceof Date ? request.updatedAt.toISOString() : request.updatedAt) : new Date().toISOString(),
     };
   }
 

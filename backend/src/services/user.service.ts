@@ -63,8 +63,8 @@ export class UserService {
         code: ur.role.code,
         name: ur.role.name,
       })),
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString() || new Date().toISOString(),
     }));
 
     return {
@@ -115,8 +115,8 @@ export class UserService {
         code: ur.role.code,
         name: ur.role.name,
       })),
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 
@@ -237,8 +237,8 @@ export class UserService {
         code: ur.role.code,
         name: ur.role.name,
       })),
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 
@@ -396,8 +396,8 @@ export class UserService {
         code: ur.role.code,
         name: ur.role.name,
       })),
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 
