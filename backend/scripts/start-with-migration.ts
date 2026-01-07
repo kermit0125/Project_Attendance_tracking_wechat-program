@@ -86,11 +86,44 @@ async function main() {
     
     if (!migrateResult.success) {
       const errorOutput = migrateResult.error?.stderr || migrateResult.error?.stdout || '';
-      const isTableNotExistError = 
-        errorOutput.includes('does not exist') || 
-        errorOutput.includes('Table') && errorOutput.includes('doesn\'t exist');
       
-      if (isTableNotExistError) {
+      // 首先检查是否是迁移失败错误（P3009）- 优先级最高
+      const isMigrationFailedError = 
+        errorOutput.includes('P3009') ||
+        errorOutput.includes('failed migrations') ||
+        errorOutput.includes('migrate resolve') ||
+        (errorOutput.includes('migration started at') && errorOutput.includes('failed'));
+      
+      if (isMigrationFailedError) {
+        console.error('\n❌ 数据库迁移失败：之前的迁移执行失败');
+        console.error('   解决方案：');
+        console.error('   1. 设置环境变量 AUTO_FIX_DB=true 以使用 db push 创建表');
+        console.error('   2. 或者手动解决迁移问题（需要 Shell 访问）');
+        
+        // 如果设置了 AUTO_FIX_DB，尝试使用 db push
+        if (process.env.AUTO_FIX_DB === 'true') {
+          console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
+          const pushResult = await runCommand('npx prisma db push --skip-generate', backendDir);
+          
+          if (pushResult.success) {
+            console.log('✅ 数据库表创建成功（使用 db push）');
+            console.log('⚠️  注意：db push 不会记录迁移历史');
+          } else {
+            console.error('❌ db push 也失败了');
+            console.error('   错误:', pushResult.error?.stderr || pushResult.error?.stdout);
+            process.exit(1);
+          }
+        } else {
+          console.error('\n   错误详情:', errorOutput);
+          process.exit(1);
+        }
+      } else {
+        // 检查是否是表不存在错误
+        const isTableNotExistError = 
+          errorOutput.includes('does not exist') || 
+          (errorOutput.includes('Table') && errorOutput.includes('doesn\'t exist'));
+        
+        if (isTableNotExistError) {
         console.error('\n❌ 数据库迁移失败：表不存在');
         console.error('   这表明数据库是全新的，但迁移文件可能不完整');
         
@@ -117,22 +150,23 @@ async function main() {
         }
       } else {
         // 检查是否是数据库连接错误
-        const isConnectionError = 
-          errorOutput.includes('Can\'t reach database') ||
-          errorOutput.includes('Connection') ||
-          errorOutput.includes('ECONNREFUSED') ||
-          errorOutput.includes('ENOTFOUND');
-        
-        if (isConnectionError) {
-          console.error('\n❌ 数据库连接失败！');
-          console.error('   请检查 DATABASE_URL 环境变量是否正确设置');
-          console.error('   错误详情:', errorOutput);
-          process.exit(1);
-        } else {
-          console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
-          console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
-          console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
-          console.warn('\n   错误详情:', errorOutput);
+          const isConnectionError = 
+            errorOutput.includes('Can\'t reach database') ||
+            errorOutput.includes('Connection') ||
+            errorOutput.includes('ECONNREFUSED') ||
+            errorOutput.includes('ENOTFOUND');
+          
+          if (isConnectionError) {
+            console.error('\n❌ 数据库连接失败！');
+            console.error('   请检查 DATABASE_URL 环境变量是否正确设置');
+            console.error('   错误详情:', errorOutput);
+            process.exit(1);
+          } else {
+            console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
+            console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
+            console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
+            console.warn('\n   错误详情:', errorOutput);
+          }
         }
       }
     } else {
@@ -236,9 +270,39 @@ async function main() {
   
   // 4. 启动应用
   const { spawn } = require('child_process');
+  // fs 已经在上面声明过了，不需要重复声明
+  
   // 确定 app.js 的路径
   const appJsPath = path.join(backendDir, 'dist', 'app.js');
   console.log(`\n📂 启动应用: ${appJsPath}`);
+  
+  // 检查文件是否存在
+  if (!fs.existsSync(appJsPath)) {
+    console.error(`\n❌ 应用文件不存在: ${appJsPath}`);
+    console.error('   请检查构建是否成功');
+    console.error(`   当前工作目录: ${process.cwd()}`);
+    console.error(`   后端目录: ${backendDir}`);
+    
+    // 列出 dist 目录内容
+    const distDir = path.join(backendDir, 'dist');
+    if (fs.existsSync(distDir)) {
+      console.error(`\n   dist 目录内容:`);
+      try {
+        const files = fs.readdirSync(distDir);
+        files.forEach((file: string) => {
+          const filePath = path.join(distDir, file);
+          const stat = fs.statSync(filePath);
+          console.error(`     ${stat.isDirectory() ? '📁' : '📄'} ${file}`);
+        });
+      } catch (e: any) {
+        console.error(`   无法读取 dist 目录: ${e.message}`);
+      }
+    } else {
+      console.error(`\n   dist 目录不存在: ${distDir}`);
+    }
+    
+    process.exit(1);
+  }
   
   const app = spawn('node', [appJsPath], {
     cwd: backendDir,
