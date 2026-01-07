@@ -5,9 +5,10 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx watch src/app.ts",
-    "build": "tsc",
+    "build": "tsc && npm run build:scripts",
+    "build:scripts": "tsc --project tsconfig.scripts.json",
     "start": "node dist/app.js",
-    "start:migrate": "tsx scripts/start-with-migration.ts",
+    "start:migrate": "node dist/scripts/start-with-migration.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -40,12 +41,12 @@
     "bcrypt": "^5.1.1",
     "dotenv": "^17.2.3",
     "fastify": "^4.25.2",
+    "tsx": "^4.7.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "pino-pretty": "^10.3.1",
     "prisma": "^5.9.1",
-    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }
 }

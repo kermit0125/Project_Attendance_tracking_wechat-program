@@ -20,10 +20,23 @@ async function runCommand(command: string, cwd: string = process.cwd()) {
 }
 
 async function main() {
+  // 确保错误能被看到
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ 未处理的 Promise 拒绝:', reason);
+    process.exit(1);
+  });
+
+  process.on('uncaughtException', (error) => {
+    console.error('❌ 未捕获的异常:', error);
+    process.exit(1);
+  });
+
   const backendDir = path.resolve(__dirname, '..');
   
   console.log('🚀 开始启动应用...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`📁 工作目录: ${backendDir}`);
+  console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
   
   // 1. 生成 Prisma Client（如果还没有）
   console.log('\n1️⃣ 生成 Prisma Client...');
@@ -39,6 +52,8 @@ async function main() {
   
   // 2. 应用数据库迁移
   console.log('\n2️⃣ 应用数据库迁移...');
+  console.log(`   数据库 URL: ${process.env.DATABASE_URL ? '已设置' : '❌ 未设置'}`);
+  
   try {
     const migrateResult = await runCommand('npx prisma migrate deploy', backendDir);
     
@@ -74,10 +89,24 @@ async function main() {
           process.exit(1);
         }
       } else {
-        console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
-        console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
-        console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
-        console.warn('\n   错误详情:', errorOutput);
+        // 检查是否是数据库连接错误
+        const isConnectionError = 
+          errorOutput.includes('Can\'t reach database') ||
+          errorOutput.includes('Connection') ||
+          errorOutput.includes('ECONNREFUSED') ||
+          errorOutput.includes('ENOTFOUND');
+        
+        if (isConnectionError) {
+          console.error('\n❌ 数据库连接失败！');
+          console.error('   请检查 DATABASE_URL 环境变量是否正确设置');
+          console.error('   错误详情:', errorOutput);
+          process.exit(1);
+        } else {
+          console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
+          console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
+          console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
+          console.warn('\n   错误详情:', errorOutput);
+        }
       }
     } else {
       console.log('✅ 数据库迁移完成');
@@ -148,7 +177,17 @@ async function main() {
         console.log('   检测到 RUN_SEED=true 或 AUTO_SEED=true，运行种子数据...');
       }
       
+      // 尝试使用 tsx 运行 seed（如果可用）
+      // 如果 tsx 不可用，seed 会失败，但可以通过 API 端点手动触发
       const seedResult = await runCommand('npx tsx prisma/seed.ts', backendDir);
+      
+      if (!seedResult.success) {
+        console.warn('⚠️  种子数据初始化失败（tsx 可能不可用）');
+        console.warn('   解决方案：');
+        console.warn('   1. 设置环境变量 RUN_SEED=true（会尝试使用 tsx）');
+        console.warn('   2. 使用 API 端点 POST /admin/system/seed（需要管理员权限）');
+        console.warn('   3. 在本地运行: npm run prisma:seed');
+      }
       
       if (seedResult.success) {
         console.log('✅ 种子数据初始化完成');
@@ -199,7 +238,12 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('❌ 启动脚本执行失败:', error);
+  console.error('\n❌ 启动脚本执行失败:');
+  console.error('错误类型:', error?.constructor?.name || typeof error);
+  console.error('错误消息:', error?.message || String(error));
+  if (error?.stack) {
+    console.error('错误堆栈:', error.stack);
+  }
   process.exit(1);
 });
 
