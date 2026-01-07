@@ -56,6 +56,11 @@ async function buildApp() {
     timeWindow: config.rateLimit.timeWindow,
   });
 
+  // 健康检查（最先注册，避免被其他路由拦截）
+  fastify.get('/health', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
   // Swagger 文档
   await fastify.register(swagger, {
     openapi: {
@@ -102,11 +107,6 @@ async function buildApp() {
   await fastify.register(settingsRoutes);
   await fastify.register(userRoutes, { prefix: '/admin' });
   await fastify.register(scheduleRoutes, { prefix: '/admin' });
-
-  // 健康检查
-  fastify.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
-  });
 
   // 错误处理
   fastify.setErrorHandler(errorHandler);
