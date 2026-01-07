@@ -13,7 +13,7 @@ datasource db {
 model Org {
   id         BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
   name       String      @db.VarChar(128)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   departments Department[]
   users      User[]
@@ -34,7 +34,7 @@ model Department {
   orgId     BigInt   @map("org_id") @db.UnsignedBigInt
   name      String   @db.VarChar(128)
   parentId  BigInt?  @map("parent_id") @db.UnsignedBigInt
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org           Org           @relation(fields: [orgId], references: [id])
   parent        Department?   @relation("DepartmentParent", fields: [parentId], references: [id])
@@ -57,8 +57,8 @@ model User {
   employeeNo   String?     @map("employee_no") @db.VarChar(64)
   fullName     String      @map("full_name") @db.VarChar(128)
   status       UserStatus  @default(ACTIVE)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.DateTime
 
   org           Org              @relation(fields: [orgId], references: [id])
   department    Department?      @relation(fields: [departmentId], references: [id])
@@ -133,7 +133,7 @@ model WorkSchedule {
   earlyLeaveGraceMinutes Int      @default(5) @map("early_leave_grace_minutes")
   minWorkMinutes         Int?     @map("min_work_minutes")
   crossDay               Boolean  @default(false) @map("cross_day") @db.TinyInt
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org     Org                  @relation(fields: [orgId], references: [id])
   punches AttendancePunch[]
@@ -151,7 +151,7 @@ model GeoFence {
   lng       Decimal  @db.Decimal(10, 7)
   radiusM   Int      @default(200) @map("radius_m")
   isActive  Boolean  @default(true) @map("is_active") @db.TinyInt
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org     Org                  @relation(fields: [orgId], references: [id])
   punches AttendancePunch[]
@@ -167,7 +167,7 @@ model Holiday {
   holidayDate      DateTime @map("holiday_date") @db.Date
   name             String   @db.VarChar(128)
   isWorkdayOverride Boolean @default(false) @map("is_workday_override") @db.TinyInt
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org Org @relation(fields: [orgId], references: [id])
 
@@ -195,7 +195,7 @@ model AttendancePunch {
   deviceInfo      String?        @map("device_info") @db.VarChar(255)
   ipAddress       String?        @map("ip_address") @db.VarChar(64)
   scheduleId      BigInt?        @map("schedule_id") @db.UnsignedBigInt
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org        Org          @relation(fields: [orgId], references: [id])
   user       User         @relation(fields: [userId], references: [id])
@@ -237,7 +237,7 @@ model AttendanceAnomaly {
   relatedPunchId BigInt?         @map("related_punch_id") @db.UnsignedBigInt
   note          String?          @db.VarChar(255)
   status        AnomalyStatus    @default(OPEN)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org          Org               @relation(fields: [orgId], references: [id])
   user         User              @relation(fields: [userId], references: [id])
@@ -290,8 +290,8 @@ model Request {
   destination   String?          @db.VarChar(128)
   fixPunchDate  DateTime?        @map("fix_punch_date") @db.Date
   fixPunchType  PunchType?       @map("fix_punch_type")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.DateTime
 
   org         Org                 @relation(fields: [orgId], references: [id])
   requester   User                @relation(fields: [requesterId], references: [id])
@@ -326,7 +326,7 @@ model RequestApproval {
   decision  ApprovalDecision @default(PENDING)
   comment   String?         @db.VarChar(500)
   decidedAt DateTime?       @map("decided_at") @db.DateTime
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
   approver  User    @relation(fields: [approverId], references: [id])
@@ -351,7 +351,7 @@ model RequestAttachment {
   mimeType      String?  @map("mime_type") @db.VarChar(128)
   fileSizeBytes BigInt?  @map("file_size_bytes") @db.UnsignedBigInt
   uploadedBy    BigInt   @map("uploaded_by") @db.UnsignedBigInt
-  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamp
+  uploadedAt  DateTime? @map("uploaded_at") @db.DateTime
 
   request    Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
   uploader   User    @relation(fields: [uploadedBy], references: [id])
@@ -370,7 +370,7 @@ model AuditLog {
   targetType  String?  @map("target_type") @db.VarChar(64)
   targetId    BigInt?  @map("target_id") @db.UnsignedBigInt
   detail      Json?
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp
+  createdAt  DateTime? @map("created_at") @db.DateTime
 
   org      Org  @relation(fields: [orgId], references: [id])
   actor    User? @relation(fields: [actorUserId], references: [id])

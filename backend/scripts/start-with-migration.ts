@@ -114,7 +114,15 @@ async function main() {
           }
           
           console.log('   步骤 2: 使用 db push 创建表结构...');
-          const pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate', backendDir);
+          
+          // 尝试使用 --force-reset 强制重置（如果数据库为空）
+          let pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate --force-reset', backendDir);
+          
+          // 如果 force-reset 失败，尝试不使用 force-reset
+          if (!pushResult.success) {
+            console.log('   ⚠️  force-reset 失败，尝试普通 db push...');
+            pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate', backendDir);
+          }
           
           if (pushResult.success) {
             console.log('✅ 数据库表创建成功（使用 db push）');
@@ -126,11 +134,13 @@ async function main() {
             
             // 检查是否是 schema 问题
             if (pushError.includes('Invalid default value') || pushError.includes('created_at')) {
-              console.error('\n   检测到 schema 问题，可能是 MySQL 版本兼容性问题');
+              console.error('\n   检测到 MySQL 默认值兼容性问题');
+              console.error('   这可能是因为 MySQL 版本或配置不支持 TIMESTAMP 默认值');
               console.error('   解决方案：');
-              console.error('   1. 检查 Prisma schema 中的时间字段类型');
-              console.error('   2. 确保使用 @db.Timestamp 而不是 @db.DateTime（对于有默认值的字段）');
-              console.error('   3. 或者移除 @default(now())，在应用层处理');
+              console.error('   1. 检查 MySQL 版本（需要 5.6.5+）');
+              console.error('   2. 检查 SQL_MODE 设置');
+              console.error('   3. 联系数据库管理员检查配置');
+              console.error('   4. 或者修改 schema.prisma，移除所有 @default，在应用层处理');
             }
             
             process.exit(1);
