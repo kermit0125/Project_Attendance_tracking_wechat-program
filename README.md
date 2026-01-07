@@ -108,6 +108,7 @@ cp .env.example .env
 
 # 初始化数据库
 npm run prisma:generate
+npm run prisma:push  # 开发环境：直接同步 schema
 npm run prisma:seed
 
 # 启动后端服务
@@ -418,7 +419,7 @@ git push origin main
    - **Root Directory**: `backend`
    - **Runtime**: `Node`
    - **Build Command**: `npm install && npm run prisma:generate && npm run build`
-   - **Start Command**: `npm start`
+   - **Start Command**: `npm run start:migrate`
    - **Plan**: `Free`（免费计划）
 
 ### 2.5 配置环境变量
@@ -439,32 +440,33 @@ git push origin main
 - `JWT_SECRET` 建议使用随机生成的强密钥（至少 32 位）
 - `DATABASE_URL` 必须包含 `sslmode=REQUIRED`
 
-### 2.6 初始化数据库
+### 2.6 数据库初始化
 
-在 Render 服务启动后，需要初始化数据库：
+**✅ 自动初始化**：应用启动时会自动执行数据库迁移，无需手动操作。
 
-#### 方法 1：使用 Render Shell（推荐）
+启动脚本（`scripts/start-with-migration.ts`）会在应用启动前：
+1. 生成 Prisma Client
+2. 自动应用所有未应用的数据库迁移（`prisma migrate deploy`）
+3. 可选：运行种子数据（如果设置了 `RUN_SEED=true`）
 
-1. 在 Render 服务页面，点击 **"Shell"** 标签
-2. 运行以下命令：
+**如需运行种子数据**：
+- 在 Render 环境变量中添加 `RUN_SEED=true`（仅首次部署时使用）
+- 或者本地运行：在 `backend` 目录创建 `.env` 文件，添加 `DATABASE_URL`，然后运行 `npm run prisma:seed`
 
-```bash
-npm run prisma:migrate deploy
-npm run prisma:seed
-```
+**备选方案：本地初始化数据库**（如果自动迁移失败）
 
-#### 方法 2：本地运行（需配置数据库访问）
+如果自动迁移失败，可以在本地连接到 Aiven 数据库执行迁移：
 
 1. 在 `backend` 目录创建 `.env` 文件
-2. 添加 `DATABASE_URL` 环境变量
+2. 添加 Aiven 的 `DATABASE_URL` 环境变量
 3. 运行：
 
 ```bash
 cd backend
 npm install
 npm run prisma:generate
-npm run prisma:migrate deploy
-npm run prisma:seed
+npm run prisma:migrate:deploy  # 应用迁移
+npm run prisma:seed            # 运行种子数据（可选）
 ```
 
 ### 2.7 获取后端 URL
@@ -638,9 +640,11 @@ CORS_ORIGIN=https://your-frontend-url.vercel.app
 
 如果更新了数据库模型：
 
-1. 在本地运行 `npm run prisma:migrate dev` 创建迁移
-2. 推送到 GitHub
-3. 在 Render Shell 中运行 `npm run prisma:migrate deploy`
+1. **开发环境**：在本地运行 `npm run prisma:push` 直接同步 schema
+2. **生产环境**：
+   - 在本地运行 `npm run prisma:migrate` 创建迁移文件
+   - 推送到 GitHub
+   - 在 Render Shell 中运行 `npm run prisma:migrate:deploy` 应用迁移
 
 ### 更新代码
 

@@ -5,7 +5,7 @@ services:
     region: singapore  # 可选: singapore, oregon, frankfurt
     plan: free
     buildCommand: npm install && npm run prisma:generate && npm run build
-    startCommand: npm start
+    startCommand: npm run start:migrate
     envVars:
       - key: NODE_ENV
         value: production
