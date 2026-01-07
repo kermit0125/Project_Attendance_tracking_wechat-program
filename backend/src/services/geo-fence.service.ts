@@ -22,10 +22,9 @@ export class GeoFenceService {
       lat: Number(f.lat),
       lng: Number(f.lng),
       radiusM: f.radiusM,
-      description: f.description,
-      isActive: f.isActive === 1,
+      address: f.address,
+      isActive: f.isActive,
       createdAt: f.createdAt,
-      updatedAt: f.updatedAt,
     }));
   }
 
@@ -39,7 +38,7 @@ export class GeoFenceService {
       lat: number;
       lng: number;
       radiusM: number;
-      description?: string;
+      address?: string;
     }
   ) {
     const fence = await this.geoFenceRepo.create({
@@ -48,7 +47,7 @@ export class GeoFenceService {
       lat: data.lat,
       lng: data.lng,
       radiusM: data.radiusM,
-      description: data.description,
+      address: data.address,
     });
 
     return {
@@ -57,10 +56,9 @@ export class GeoFenceService {
       lat: Number(fence.lat),
       lng: Number(fence.lng),
       radiusM: fence.radiusM,
-      description: fence.description,
-      isActive: fence.isActive === 1,
+      address: fence.address,
+      isActive: fence.isActive,
       createdAt: fence.createdAt,
-      updatedAt: fence.updatedAt,
     };
   }
 
@@ -75,7 +73,7 @@ export class GeoFenceService {
       lat?: number;
       lng?: number;
       radiusM?: number;
-      description?: string;
+      address?: string;
       isActive?: boolean;
     }
   ) {
@@ -89,8 +87,8 @@ export class GeoFenceService {
       lat: data.lat,
       lng: data.lng,
       radiusM: data.radiusM,
-      description: data.description,
-      isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : undefined,
+      address: data.address,
+      isActive: data.isActive,
     });
 
     return {
@@ -99,10 +97,9 @@ export class GeoFenceService {
       lat: Number(updated.lat),
       lng: Number(updated.lng),
       radiusM: updated.radiusM,
-      description: updated.description,
-      isActive: updated.isActive === 1,
+      address: updated.address,
+      isActive: updated.isActive,
       createdAt: updated.createdAt,
-      updatedAt: updated.updatedAt,
     };
   }
 

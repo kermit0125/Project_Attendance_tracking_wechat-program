@@ -41,7 +41,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.login(request, reply);
+    return controller.login(request as any, reply);
   });
 
   // 获取当前用户信息（需要鉴权）
@@ -64,7 +64,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getCurrentUser(request, reply);
+    return controller.getCurrentUser(request as any, reply);
   });
 }
 

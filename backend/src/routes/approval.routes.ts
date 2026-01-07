@@ -35,7 +35,7 @@ export async function approvalRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getPendingApprovals(request, reply);
+    return controller.getPendingApprovals(request as any, reply);
   });
 
   // 审批详情
@@ -109,7 +109,7 @@ export async function approvalRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.makeDecision(request, reply);
+    return controller.makeDecision(request as any, reply);
   });
 }
 

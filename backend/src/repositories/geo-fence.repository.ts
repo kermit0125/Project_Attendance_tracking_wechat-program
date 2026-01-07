@@ -54,7 +54,7 @@ export class GeoFenceRepository {
     lat: number;
     lng: number;
     radiusM: number;
-    description?: string;
+    address?: string;
   }) {
     return prisma.geoFence.create({
       data: {
@@ -63,8 +63,8 @@ export class GeoFenceRepository {
         lat: data.lat,
         lng: data.lng,
         radiusM: data.radiusM,
-        description: data.description,
-        isActive: 1,
+        address: data.address,
+        isActive: true,
       },
     });
   }
@@ -79,8 +79,8 @@ export class GeoFenceRepository {
       lat?: number;
       lng?: number;
       radiusM?: number;
-      description?: string;
-      isActive?: number;
+      address?: string;
+      isActive?: boolean;
     }
   ) {
     return prisma.geoFence.update({
@@ -92,7 +92,7 @@ export class GeoFenceRepository {
         ...(data.lat !== undefined && { lat: data.lat }),
         ...(data.lng !== undefined && { lng: data.lng }),
         ...(data.radiusM !== undefined && { radiusM: data.radiusM }),
-        ...(data.description !== undefined && { description: data.description }),
+        ...(data.address !== undefined && { address: data.address }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });

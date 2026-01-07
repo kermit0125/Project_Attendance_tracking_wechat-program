@@ -41,7 +41,7 @@ export async function punchRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.createPunch(request, reply);
+    return controller.createPunch(request as any, reply);
   });
 
   // 获取今天的打卡记录
@@ -64,7 +64,7 @@ export async function punchRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getToday(request, reply);
+    return controller.getToday(request as any, reply);
   });
 
   // 获取打卡历史
@@ -97,7 +97,7 @@ export async function punchRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getHistory(request, reply);
+    return controller.getHistory(request as any, reply);
   });
 
   // 获取当前班次信息
@@ -119,7 +119,7 @@ export async function punchRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getCurrentSchedule(request, reply);
+    return controller.getCurrentSchedule(request as any, reply);
   });
 }
 

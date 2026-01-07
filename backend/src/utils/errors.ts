@@ -1,6 +1,27 @@
 import { AppError } from '../middlewares/error-handler';
 
 /**
+ * 便捷错误类
+ */
+export class NotFoundError extends AppError {
+  constructor(message: string = '资源不存在') {
+    super('NOT_FOUND', message, 404);
+  }
+}
+
+export class BadRequestError extends AppError {
+  constructor(message: string = '请求参数错误') {
+    super('BAD_REQUEST', message, 400);
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message: string = '资源冲突') {
+    super('CONFLICT', message, 409);
+  }
+}
+
+/**
  * 常用错误定义
  */
 export const Errors = {

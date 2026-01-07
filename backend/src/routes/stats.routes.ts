@@ -33,7 +33,7 @@ export async function statsRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getMonthStats(request, reply);
+    return controller.getMonthStats(request as any, reply);
   });
 
   // 管理端月度报表

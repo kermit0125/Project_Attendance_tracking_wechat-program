@@ -45,7 +45,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.createRequest(request, reply);
+    return controller.createRequest(request as any, reply);
   });
 
   // 获取申请详情 - 必须在 /requests 之前注册，否则会被 /requests 匹配
@@ -73,7 +73,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getRequestById(request, reply);
+    return controller.getRequestById(request as any, reply);
   });
 
   // 获取申请列表 - 必须在 /requests/:id 之后注册
@@ -102,7 +102,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.getRequests(request, reply);
+    return controller.getRequests(request as any, reply);
   });
 
   // 取消申请
@@ -130,7 +130,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.cancelRequest(request, reply);
+    return controller.cancelRequest(request as any, reply);
   });
 
   // 添加附件
@@ -168,7 +168,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    return controller.addAttachment(request, reply);
+    return controller.addAttachment(request as any, reply);
   });
 }
 
