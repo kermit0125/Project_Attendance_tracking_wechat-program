@@ -14,6 +14,13 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
+// Element Plus locale 类型声明
+declare module 'element-plus/dist/locale/zh-cn.mjs' {
+  const locale: any
+  export default locale
+}
+
+
 
 
 

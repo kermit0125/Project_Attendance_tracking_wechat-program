@@ -31,3 +31,4 @@ npx prisma db push
 
 这会将 schema.prisma 中的定义直接同步到数据库，不需要迁移文件。
 
+
