@@ -21,4 +21,14 @@ services:
         value: 100
       - key: RATE_LIMIT_TIME_WINDOW
         value: 60000
+      # 可选：CORS 白名单（用逗号分隔多个域名）
+      # 如果不设置，将允许所有来源（开发环境默认行为）
+      # - key: CORS_ORIGIN
+      #   value: https://your-frontend-url.vercel.app
+      # 可选：强制运行种子数据（默认会自动检测数据库是否为空）
+      # - key: RUN_SEED
+      #   value: true
+      # 或使用 AUTO_SEED（效果相同）
+      # - key: AUTO_SEED
+      #   value: true
 

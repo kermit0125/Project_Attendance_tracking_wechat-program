@@ -36,8 +36,9 @@ async function buildApp() {
   });
 
   // 注册插件
+  // CORS 配置：如果设置了 CORS_ORIGIN 环境变量，使用白名单；否则允许所有来源
   await fastify.register(cors, {
-    origin: true,
+    origin: config.corsOrigin || true, // 如果配置了 CORS_ORIGIN，使用白名单；否则允许所有来源
     credentials: true,
   });
 

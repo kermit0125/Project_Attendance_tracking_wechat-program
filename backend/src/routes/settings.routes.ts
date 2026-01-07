@@ -155,6 +155,81 @@ export async function settingsRoutes(fastify: FastifyInstance) {
       data: { list: [], total: 0 },
     });
   });
+
+  // 初始化种子数据（仅管理员，仅在生产环境可用）
+  fastify.post('/admin/system/seed', {
+    preHandler: [authenticate, requireAdminOrHR()],
+    schema: {
+      description: '初始化种子数据（仅首次部署时使用）',
+      tags: ['系统管理'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          confirm: { 
+            type: 'boolean', 
+            description: '确认操作（必须为 true）' 
+          },
+        },
+        required: ['confirm'],
+      },
+    },
+  }, async (request: any, reply) => {
+    const { confirm } = request.body as { confirm?: boolean };
+    
+    if (!confirm) {
+      return reply.status(400).send({
+        code: 'BAD_REQUEST',
+        message: '必须确认操作（设置 confirm: true）',
+      });
+    }
+
+    try {
+      // 检查是否已有数据
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const roleCount = await prisma.role.count();
+      const orgCount = await prisma.org.count();
+      
+      if (roleCount > 0 || orgCount > 0) {
+        await prisma.$disconnect();
+        return reply.status(400).send({
+          code: 'BAD_REQUEST',
+          message: '数据库已有数据，无法重新初始化。如需重置，请手动清空数据库。',
+          data: { roleCount, orgCount },
+        });
+      }
+
+      // 运行 seed
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      
+      const backendDir = require('path').resolve(__dirname, '../..');
+      const { stdout, stderr } = await execAsync('npx tsx prisma/seed.ts', { 
+        cwd: backendDir,
+        env: process.env,
+      });
+      
+      await prisma.$disconnect();
+      
+      return reply.send({
+        code: 'SUCCESS',
+        message: '种子数据初始化成功',
+        data: { 
+          output: stdout,
+          warnings: stderr || undefined,
+        },
+      });
+    } catch (error: any) {
+      return reply.status(500).send({
+        code: 'INTERNAL_ERROR',
+        message: '种子数据初始化失败',
+        error: error.message,
+      });
+    }
+  });
 }
 
 

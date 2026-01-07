@@ -43,24 +43,126 @@ async function main() {
     const migrateResult = await runCommand('npx prisma migrate deploy', backendDir);
     
     if (!migrateResult.success) {
-      console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
-      console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
-      console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
+      const errorOutput = migrateResult.error?.stderr || migrateResult.error?.stdout || '';
+      const isTableNotExistError = 
+        errorOutput.includes('does not exist') || 
+        errorOutput.includes('Table') && errorOutput.includes('doesn\'t exist');
+      
+      if (isTableNotExistError) {
+        console.error('\n❌ 数据库迁移失败：表不存在');
+        console.error('   这表明数据库是全新的，但迁移文件可能不完整');
+        
+        // 如果设置了 AUTO_FIX_DB 环境变量，尝试使用 db push 自动修复
+        if (process.env.AUTO_FIX_DB === 'true') {
+          console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
+          const pushResult = await runCommand('npx prisma db push --skip-generate', backendDir);
+          
+          if (pushResult.success) {
+            console.log('✅ 数据库表创建成功（使用 db push）');
+            console.log('⚠️  注意：db push 不会记录迁移历史，建议后续重新创建正确的迁移');
+          } else {
+            console.error('❌ db push 也失败了');
+            console.error('   请手动在 Render Shell 中运行: npx prisma db push');
+            process.exit(1);
+          }
+        } else {
+          console.error('   解决方案：');
+          console.error('   1. 在 Render Shell 中运行: npx prisma db push');
+          console.error('   2. 或者设置环境变量 AUTO_FIX_DB=true 以自动修复（不推荐用于生产）');
+          console.error('   3. 或者检查迁移文件是否包含创建表的语句');
+          console.error('\n   错误详情:', errorOutput);
+          process.exit(1);
+        }
+      } else {
+        console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
+        console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
+        console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
+        console.warn('\n   错误详情:', errorOutput);
+      }
     } else {
       console.log('✅ 数据库迁移完成');
     }
   } catch (error: any) {
-    console.warn('\n⚠️  迁移过程中出现错误，但继续启动应用...');
-    console.warn('   错误:', error.message);
+    const errorMessage = error.message || String(error);
+    const isTableNotExistError = 
+      errorMessage.includes('does not exist') || 
+      errorMessage.includes('Table') && errorMessage.includes('doesn\'t exist');
+    
+    if (isTableNotExistError) {
+      console.error('\n❌ 数据库迁移失败：表不存在');
+      console.error('   这表明数据库是全新的，但迁移文件可能不完整');
+      
+      // 如果设置了 AUTO_FIX_DB 环境变量，尝试使用 db push 自动修复
+      if (process.env.AUTO_FIX_DB === 'true') {
+        console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
+        try {
+          const pushResult = await runCommand('npx prisma db push --skip-generate', backendDir);
+          
+          if (pushResult.success) {
+            console.log('✅ 数据库表创建成功（使用 db push）');
+            console.log('⚠️  注意：db push 不会记录迁移历史，建议后续重新创建正确的迁移');
+          } else {
+            console.error('❌ db push 也失败了');
+            console.error('   请手动在 Render Shell 中运行: npx prisma db push');
+            process.exit(1);
+          }
+        } catch (pushError) {
+          console.error('❌ db push 执行失败');
+          process.exit(1);
+        }
+      } else {
+        console.error('   解决方案：');
+        console.error('   1. 在 Render Shell 中运行: npx prisma db push');
+        console.error('   2. 或者设置环境变量 AUTO_FIX_DB=true 以自动修复（不推荐用于生产）');
+        console.error('\n   错误:', errorMessage);
+        process.exit(1);
+      }
+    } else {
+      console.warn('\n⚠️  迁移过程中出现错误，但继续启动应用...');
+      console.warn('   错误:', errorMessage);
+    }
   }
   
-  // 3. 运行种子数据（可选，只在开发环境或首次部署时）
-  const shouldSeed = process.env.RUN_SEED === 'true';
-  if (shouldSeed) {
-    console.log('\n3️⃣ 运行种子数据...');
-    await runCommand('npx tsx prisma/seed.ts', backendDir);
-  } else {
-    console.log('\n3️⃣ 跳过种子数据（设置 RUN_SEED=true 以启用）');
+  // 3. 检查并运行种子数据
+  console.log('\n3️⃣ 检查是否需要初始化种子数据...');
+  
+  // 检查数据库是否为空（通过检查角色表）
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    // 检查是否存在角色数据
+    const roleCount = await prisma.role.count();
+    const orgCount = await prisma.org.count();
+    
+    await prisma.$disconnect();
+    
+    const shouldAutoSeed = process.env.RUN_SEED === 'true' || 
+                           process.env.AUTO_SEED === 'true' ||
+                           (roleCount === 0 && orgCount === 0); // 如果数据库为空，自动运行 seed
+    
+    if (shouldAutoSeed) {
+      if (roleCount === 0 && orgCount === 0) {
+        console.log('   检测到数据库为空，自动运行种子数据...');
+      } else {
+        console.log('   检测到 RUN_SEED=true 或 AUTO_SEED=true，运行种子数据...');
+      }
+      
+      const seedResult = await runCommand('npx tsx prisma/seed.ts', backendDir);
+      
+      if (seedResult.success) {
+        console.log('✅ 种子数据初始化完成');
+      } else {
+        console.warn('⚠️  种子数据初始化失败，但继续启动应用...');
+        console.warn('   如果这是首次部署，请检查数据库连接和 seed 脚本');
+      }
+    } else {
+      console.log(`   数据库已有数据（${roleCount} 个角色，${orgCount} 个组织），跳过种子数据`);
+      console.log('   如需重新初始化，设置环境变量 RUN_SEED=true 或 AUTO_SEED=true');
+    }
+  } catch (error: any) {
+    console.warn('⚠️  检查数据库状态时出错，跳过自动种子数据:', error.message);
+    console.warn('   如需手动初始化，设置环境变量 RUN_SEED=true');
   }
   
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

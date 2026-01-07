@@ -18,6 +18,10 @@ export const config = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     timeWindow: parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10),
   },
+  // CORS 配置：支持多个来源，用逗号分隔
+  corsOrigin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : undefined, // undefined 表示允许所有来源（开发环境默认行为）
 };
 
 // 验证必需的环境变量

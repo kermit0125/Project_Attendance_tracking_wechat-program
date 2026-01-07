@@ -442,16 +442,21 @@ git push origin main
 
 ### 2.6 数据库初始化
 
-**✅ 自动初始化**：应用启动时会自动执行数据库迁移，无需手动操作。
+**✅ 自动初始化**：应用启动时会自动执行数据库迁移和种子数据初始化，无需手动操作。
 
 启动脚本（`scripts/start-with-migration.ts`）会在应用启动前：
 1. 生成 Prisma Client
 2. 自动应用所有未应用的数据库迁移（`prisma migrate deploy`）
-3. 可选：运行种子数据（如果设置了 `RUN_SEED=true`）
+3. **自动检测并运行种子数据**：
+   - 如果数据库为空（没有角色和组织），**自动运行 seed**
+   - 或者设置环境变量 `RUN_SEED=true` 或 `AUTO_SEED=true` 强制运行
 
-**如需运行种子数据**：
-- 在 Render 环境变量中添加 `RUN_SEED=true`（仅首次部署时使用）
-- 或者本地运行：在 `backend` 目录创建 `.env` 文件，添加 `DATABASE_URL`，然后运行 `npm run prisma:seed`
+**种子数据初始化方式**（按优先级）：
+
+1. **自动检测（推荐）**：如果数据库为空，启动脚本会自动运行 seed，无需任何配置
+2. **环境变量**：在 Render 环境变量中添加 `RUN_SEED=true` 或 `AUTO_SEED=true`
+3. **API 端点**：部署后，使用管理员账号调用 `POST /admin/system/seed`（需要管理员权限）
+4. **本地运行**：在 `backend` 目录创建 `.env` 文件，添加 `DATABASE_URL`，然后运行 `npm run prisma:seed`
 
 **备选方案：本地初始化数据库**（如果自动迁移失败）
 
@@ -587,28 +592,26 @@ git push origin main
 
 ### 4.1 更新后端 CORS 配置
 
+**✅ 代码已自动支持 CORS 环境变量配置**
+
 在 Render 服务的环境变量中，添加前端域名到 CORS 白名单：
 
-1. 在 `backend/src/app.ts` 中，CORS 配置应该允许前端域名：
-
-```typescript
-await fastify.register(cors, {
-  origin: [
-    'http://localhost:5173', // 本地开发
-    'https://your-frontend-url.vercel.app', // Vercel 前端域名
-  ],
-  credentials: true,
-});
-```
-
-2. 或者使用环境变量配置（推荐）：
+**推荐方式：使用环境变量配置**
 
 在 Render 环境变量中添加：
 ```
 CORS_ORIGIN=https://your-frontend-url.vercel.app
 ```
 
-然后在 `backend/src/config/env.ts` 和 `backend/src/app.ts` 中使用该环境变量。
+如果需要允许多个域名，用逗号分隔：
+```
+CORS_ORIGIN=http://localhost:5173,https://your-frontend-url.vercel.app
+```
+
+**说明**：
+- 如果设置了 `CORS_ORIGIN`，后端只会允许列表中的域名访问
+- 如果没有设置 `CORS_ORIGIN`，后端会允许所有来源（开发环境默认行为）
+- 代码已自动从 `backend/src/config/env.ts` 读取配置，并在 `backend/src/app.ts` 中使用
 
 ### 4.2 更新前端 API 地址
 
