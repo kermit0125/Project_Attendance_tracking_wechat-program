@@ -1,0 +1,826 @@
+{
+	"info": {
+		"_postman_id": "attendance-api-collection",
+		"name": "企业考勤系统 API",
+		"description": "企业考勤系统后端 API 测试集合",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "01-认证模块",
+			"item": [
+				{
+					"name": "登录",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 检查响应状态",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// 检查响应结构",
+									"pm.test(\"Response has token\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('token');",
+									"    pm.expect(jsonData.data).to.have.property('user');",
+									"});",
+									"",
+									"// 自动保存 token 到环境变量",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"token\", jsonData.data.token);",
+									"        pm.environment.set(\"user_id\", jsonData.data.user.id);",
+									"        console.log(\"Token 已自动保存到环境变量\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"employee@test.com\",\n  \"password\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "用户登录，登录成功后自动保存 token 到环境变量"
+					},
+					"response": []
+				},
+				{
+					"name": "获取当前用户信息",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "获取当前登录用户的完整信息"
+					},
+					"response": []
+				}
+			],
+			"description": "认证相关接口"
+		},
+		{
+			"name": "02-打卡模块",
+			"item": [
+				{
+					"name": "上班打卡",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"punchType\": \"IN\",\n  \"lat\": 39.9042,\n  \"lng\": 116.4074,\n  \"accuracyM\": 10,\n  \"verifyMethod\": \"PHOTO\",\n  \"evidenceUrl\": \"https://example.com/photos/punch-in.jpg\",\n  \"deviceInfo\": \"iPhone 15 Pro / iOS 17.0\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/punch",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"punch"
+							]
+						},
+						"description": "上班打卡，punchType: IN=上班, OUT=下班"
+					},
+					"response": []
+				},
+				{
+					"name": "下班打卡",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"punchType\": \"OUT\",\n  \"lat\": 39.9042,\n  \"lng\": 116.4074,\n  \"verifyMethod\": \"PHOTO\",\n  \"evidenceUrl\": \"https://example.com/photos/punch-out.jpg\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/punch",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"punch"
+							]
+						},
+						"description": "下班打卡"
+					},
+					"response": []
+				},
+				{
+					"name": "获取今天打卡记录",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/punch/today",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"punch",
+								"today"
+							]
+						},
+						"description": "获取今天的打卡记录"
+					},
+					"response": []
+				},
+				{
+					"name": "获取打卡历史",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/punch/history?from=2024-01-01&to=2024-01-31&page=1&pageSize=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"punch",
+								"history"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "to",
+									"value": "2024-01-31"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
+							]
+						},
+						"description": "获取指定时间范围内的打卡历史"
+					},
+					"response": []
+				}
+			],
+			"description": "打卡相关接口"
+		},
+		{
+			"name": "03-申请模块",
+			"item": [
+				{
+					"name": "创建请假申请",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"request_id\", jsonData.data.id);",
+									"        console.log(\"申请 ID 已保存: \" + jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestType\": \"LEAVE\",\n  \"startAt\": \"2024-01-20T09:00:00Z\",\n  \"endAt\": \"2024-01-20T18:00:00Z\",\n  \"leaveCategory\": \"年假\",\n  \"reason\": \"个人事务\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/requests",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests"
+							]
+						},
+						"description": "创建请假申请，requestType: LEAVE=请假, TRIP=出差, FIX_PUNCH=补卡, OVERTIME=加班"
+					},
+					"response": []
+				},
+				{
+					"name": "创建出差申请",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestType\": \"TRIP\",\n  \"startAt\": \"2024-01-25T09:00:00Z\",\n  \"endAt\": \"2024-01-27T18:00:00Z\",\n  \"destination\": \"上海\",\n  \"reason\": \"客户拜访\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/requests",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests"
+							]
+						},
+						"description": "创建出差申请"
+					},
+					"response": []
+				},
+				{
+					"name": "创建补卡申请",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestType\": \"FIX_PUNCH\",\n  \"fixPunchDate\": \"2024-01-15\",\n  \"fixPunchType\": \"IN\",\n  \"startAt\": \"2024-01-15T09:00:00Z\",\n  \"endAt\": \"2024-01-15T09:00:00Z\",\n  \"reason\": \"忘记打卡\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/requests",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests"
+							]
+						},
+						"description": "创建补卡申请"
+					},
+					"response": []
+				},
+				{
+					"name": "创建加班申请",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestType\": \"OVERTIME\",\n  \"startAt\": \"2024-01-18T18:00:00Z\",\n  \"endAt\": \"2024-01-18T21:00:00Z\",\n  \"reason\": \"项目紧急，需要加班\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/requests",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests"
+							]
+						},
+						"description": "创建加班申请"
+					},
+					"response": []
+				},
+				{
+					"name": "获取申请列表",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/requests?page=1&pageSize=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "20"
+								}
+							]
+						},
+						"description": "获取当前用户的申请列表"
+					},
+					"response": []
+				},
+				{
+					"name": "获取申请详情",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/requests/{{request_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests",
+								"{{request_id}}"
+							]
+						},
+						"description": "获取指定申请的详细信息"
+					},
+					"response": []
+				},
+				{
+					"name": "取消申请",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/requests/{{request_id}}/cancel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests",
+								"{{request_id}}",
+								"cancel"
+							]
+						},
+						"description": "取消待审批的申请"
+					},
+					"response": []
+				},
+				{
+					"name": "添加附件",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fileName\": \"病假证明.jpg\",\n  \"fileUrl\": \"https://example.com/files/sick-leave-proof.jpg\",\n  \"mimeType\": \"image/jpeg\",\n  \"fileSizeBytes\": 102400\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/requests/{{request_id}}/attachments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"requests",
+								"{{request_id}}",
+								"attachments"
+							]
+						},
+						"description": "为申请添加附件"
+					},
+					"response": []
+				}
+			],
+			"description": "申请相关接口"
+		},
+		{
+			"name": "04-审批模块",
+			"item": [
+				{
+					"name": "获取待审批列表",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/approvals",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"approvals"
+							]
+						},
+						"description": "获取待我审批的申请列表（需要 MANAGER/HR/ADMIN 权限）"
+					},
+					"response": []
+				},
+				{
+					"name": "获取审批详情",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/approvals/{{request_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"approvals",
+								"{{request_id}}"
+							]
+						},
+						"description": "获取审批详情"
+					},
+					"response": []
+				},
+				{
+					"name": "审批通过",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"decision\": \"APPROVED\",\n  \"comment\": \"同意\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/approvals/{{request_id}}/decision",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"approvals",
+								"{{request_id}}",
+								"decision"
+							]
+						},
+						"description": "审批通过申请"
+					},
+					"response": []
+				},
+				{
+					"name": "审批驳回",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"decision\": \"REJECTED\",\n  \"comment\": \"理由不充分，驳回\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/approvals/{{request_id}}/decision",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"approvals",
+								"{{request_id}}",
+								"decision"
+							]
+						},
+						"description": "驳回申请（必须填写 comment）"
+					},
+					"response": []
+				}
+			],
+			"description": "审批相关接口（需要 MANAGER/HR/ADMIN 权限）"
+		},
+		{
+			"name": "05-统计模块",
+			"item": [
+				{
+					"name": "获取月度统计",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stats/month?month=2024-01",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"stats",
+								"month"
+							],
+							"query": [
+								{
+									"key": "month",
+									"value": "2024-01"
+								}
+							]
+						},
+						"description": "获取指定月份的统计信息"
+					},
+					"response": []
+				}
+			],
+			"description": "统计相关接口"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
+
+
+

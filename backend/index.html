@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业考勤打卡小程序 - 高保真原型图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+        }
+        .phone-frame {
+            width: 393px;
+            height: 852px;
+            border-radius: 40px;
+            background: #000;
+            padding: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin: 20px;
+        }
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            border-radius: 32px;
+            overflow: hidden;
+            background: #fff;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">企业考勤打卡小程序 - 高保真原型图</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+            <!-- A. 登录/绑定/入职引导 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/01-login.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">1. 微信授权登录页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/02-bind-phone.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">2. 绑定手机号页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/03-onboarding.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">3. 首次入职信息页</p>
+            </div>
+            
+            <!-- B. 首页打卡 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/04-home-normal.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">4. 首页-正常可打卡</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/05-home-location-denied.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">5. 首页-定位未授权</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/06-home-outside-fence.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">6. 首页-超出围栏</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/07-home-verification-failed.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">7. 首页-真人校验失败</p>
+            </div>
+            
+            <!-- C. 申请中心 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/08-apply-center.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">8. 申请中心首页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/09-apply-detail.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">9. 我的申请-详情页</p>
+            </div>
+            
+            <!-- D. 申请表单 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/10-leave-form.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">10. 请假申请表单</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/11-travel-form.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">11. 出差申请表单</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/12-makeup-form.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">12. 补卡申请表单</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/13-overtime-form.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">13. 加班申请表单</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/14-submit-success.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">14. 提交确认页</p>
+            </div>
+            
+            <!-- E. 统计 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/15-stats-home.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">15. 统计首页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/16-stats-calendar.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">16. 月历视图</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/17-stats-exceptions.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">17. 异常列表</p>
+            </div>
+            
+            <!-- F. 我的 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/18-profile-home.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">18. 我的首页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/19-reminder-settings.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">19. 提醒设置页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/20-privacy-settings.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">20. 权限与隐私说明页</p>
+            </div>
+            
+            <!-- G. 审批中心 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/21-approval-pending.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">21. 待我审批列表</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/22-approval-detail.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">22. 审批详情页</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/23-approval-history.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">23. 已审批列表</p>
+            </div>
+            
+            <!-- H. 管理台 -->
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/24-admin-overview.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">24. 管理台概览</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/25-admin-report.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">25. 员工出勤月报</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/26-admin-exceptions.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">26. 异常处理中心</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/27-admin-employees.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">27. 员工管理</p>
+            </div>
+            <div class="phone-frame">
+                <div class="phone-screen">
+                    <iframe src="pages/28-admin-settings.html"></iframe>
+                </div>
+                <p class="text-center mt-2 text-sm text-gray-600">28. 规则配置</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+

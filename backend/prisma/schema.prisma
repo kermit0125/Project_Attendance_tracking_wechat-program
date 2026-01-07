@@ -1,0 +1,382 @@
+// Prisma Schema for 企业考勤系统
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== 组织与账号 ==============
+
+model Org {
+  id         BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String      @db.VarChar(128)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.DateTime
+
+  departments Department[]
+  users      User[]
+  workSchedules WorkSchedule[]
+  geoFences  GeoFence[]
+  holidays   Holiday[]
+  punches    AttendancePunch[]
+  anomalies  AttendanceAnomaly[]
+  requests   Request[]
+  auditLogs  AuditLog[]
+  userManagers UserManager[]
+
+  @@map("orgs")
+}
+
+model Department {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId     BigInt   @map("org_id") @db.UnsignedBigInt
+  name      String   @db.VarChar(128)
+  parentId  BigInt?  @map("parent_id") @db.UnsignedBigInt
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime
+
+  org           Org           @relation(fields: [orgId], references: [id])
+  parent        Department?   @relation("DepartmentParent", fields: [parentId], references: [id])
+  children      Department[]  @relation("DepartmentParent")
+  users         User[]
+
+  @@index([orgId], map: "idx_dept_org")
+  @@index([parentId], map: "idx_dept_parent")
+  @@map("departments")
+}
+
+model User {
+  id           BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId        BigInt      @map("org_id") @db.UnsignedBigInt
+  departmentId BigInt?     @map("department_id") @db.UnsignedBigInt
+  email        String?     @db.VarChar(255)
+  phone        String?     @db.VarChar(32)
+  passwordHash String?     @map("password_hash") @db.VarChar(255)
+  wechatOpenid String?     @map("wechat_openid") @db.VarChar(128)
+  employeeNo   String?     @map("employee_no") @db.VarChar(64)
+  fullName     String      @map("full_name") @db.VarChar(128)
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.DateTime
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.DateTime
+
+  org           Org              @relation(fields: [orgId], references: [id])
+  department    Department?      @relation(fields: [departmentId], references: [id])
+  roles         UserRole[]
+  asEmployee    UserManager[]    @relation("Employee")
+  asManager     UserManager[]    @relation("Manager")
+  punches       AttendancePunch[]
+  anomalies     AttendanceAnomaly[]
+  requests      Request[]
+  approvals     RequestApproval[]
+  attachments   RequestAttachment[]
+  auditLogs     AuditLog[]
+
+  @@unique([orgId, email], map: "uk_users_org_email")
+  @@unique([orgId, phone], map: "uk_users_org_phone")
+  @@unique([orgId, employeeNo], map: "uk_users_org_empno")
+  @@index([orgId], map: "idx_users_org")
+  @@index([departmentId], map: "idx_users_dept")
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LEFT
+}
+
+model Role {
+  id       BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  code     String   @unique @db.VarChar(64)
+  name     String   @db.VarChar(128)
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId BigInt @map("user_id") @db.UnsignedBigInt
+  roleId BigInt @map("role_id") @db.UnsignedBigInt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserManager {
+  orgId      BigInt @map("org_id") @db.UnsignedBigInt
+  employeeId BigInt @id @map("employee_id") @db.UnsignedBigInt
+  managerId  BigInt @map("manager_id") @db.UnsignedBigInt
+
+  org      Org   @relation(fields: [orgId], references: [id])
+  employee User  @relation("Employee", fields: [employeeId], references: [id], onDelete: Cascade)
+  manager  User  @relation("Manager", fields: [managerId], references: [id], onDelete: Restrict)
+
+  @@index([managerId], map: "idx_um_manager")
+  @@map("user_manager")
+}
+
+// ============== 规则配置 ==============
+
+model WorkSchedule {
+  id                     BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId                  BigInt   @map("org_id") @db.UnsignedBigInt
+  name                   String   @db.VarChar(128)
+  startTime              DateTime @map("start_time") @db.Time
+  endTime                DateTime @map("end_time") @db.Time
+  breakStart             DateTime? @map("break_start") @db.Time
+  breakEnd               DateTime? @map("break_end") @db.Time
+  lateGraceMinutes       Int      @default(5) @map("late_grace_minutes")
+  earlyLeaveGraceMinutes Int      @default(5) @map("early_leave_grace_minutes")
+  minWorkMinutes         Int?     @map("min_work_minutes")
+  crossDay               Boolean  @default(false) @map("cross_day") @db.TinyInt
+  createdAt              DateTime @default(now()) @map("created_at") @db.DateTime
+
+  org     Org                  @relation(fields: [orgId], references: [id])
+  punches AttendancePunch[]
+
+  @@index([orgId], map: "idx_ws_org")
+  @@map("work_schedules")
+}
+
+model GeoFence {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId     BigInt   @map("org_id") @db.UnsignedBigInt
+  name      String   @db.VarChar(128)
+  address   String?  @db.VarChar(255)
+  lat       Decimal  @db.Decimal(10, 7)
+  lng       Decimal  @db.Decimal(10, 7)
+  radiusM   Int      @default(200) @map("radius_m")
+  isActive  Boolean  @default(true) @map("is_active") @db.TinyInt
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime
+
+  org     Org                  @relation(fields: [orgId], references: [id])
+  punches AttendancePunch[]
+
+  @@index([orgId], map: "idx_gf_org")
+  @@index([orgId, isActive], map: "idx_gf_active")
+  @@map("geo_fences")
+}
+
+model Holiday {
+  id               BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId            BigInt   @map("org_id") @db.UnsignedBigInt
+  holidayDate      DateTime @map("holiday_date") @db.Date
+  name             String   @db.VarChar(128)
+  isWorkdayOverride Boolean @default(false) @map("is_workday_override") @db.TinyInt
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime
+
+  org Org @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, holidayDate], map: "uk_holidays_org_date")
+  @@map("holidays")
+}
+
+// ============== 打卡与异常 ==============
+
+model AttendancePunch {
+  id              BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId           BigInt         @map("org_id") @db.UnsignedBigInt
+  userId          BigInt         @map("user_id") @db.UnsignedBigInt
+  punchType       PunchType      @map("punch_type")
+  punchedAt       DateTime       @map("punched_at") @db.DateTime
+  lat             Decimal?       @db.Decimal(10, 7)
+  lng             Decimal?       @db.Decimal(10, 7)
+  accuracyM       Int?           @map("accuracy_m")
+  geoFenceId      BigInt?        @map("geo_fence_id") @db.UnsignedBigInt
+  distanceToFenceM Int?          @map("distance_to_fence_m")
+  inFence         Boolean?       @map("in_fence") @db.TinyInt
+  verifyMethod    VerifyMethod   @default(NONE) @map("verify_method")
+  verifyStatus    VerifyStatus   @default(SKIPPED) @map("verify_status")
+  evidenceUrl     String?        @map("evidence_url") @db.VarChar(500)
+  deviceInfo      String?        @map("device_info") @db.VarChar(255)
+  ipAddress       String?        @map("ip_address") @db.VarChar(64)
+  scheduleId      BigInt?        @map("schedule_id") @db.UnsignedBigInt
+  createdAt       DateTime       @default(now()) @map("created_at") @db.DateTime
+
+  org        Org          @relation(fields: [orgId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
+  geoFence   GeoFence?    @relation(fields: [geoFenceId], references: [id])
+  schedule   WorkSchedule? @relation(fields: [scheduleId], references: [id])
+  anomalies  AttendanceAnomaly[]
+
+  @@index([userId, punchedAt], map: "idx_punch_user_time")
+  @@index([orgId, punchedAt], map: "idx_punch_org_time")
+  @@index([punchType, punchedAt], map: "idx_punch_type_time")
+  @@map("attendance_punches")
+}
+
+enum PunchType {
+  IN
+  OUT
+}
+
+enum VerifyMethod {
+  NONE
+  PHOTO
+  FACE
+  LIVENESS
+}
+
+enum VerifyStatus {
+  PASS
+  FAIL
+  SKIPPED
+}
+
+model AttendanceAnomaly {
+  id            BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId         BigInt           @map("org_id") @db.UnsignedBigInt
+  userId        BigInt           @map("user_id") @db.UnsignedBigInt
+  anomalyDate   DateTime         @map("anomaly_date") @db.Date
+  anomalyType   AnomalyType      @map("anomaly_type")
+  severity      Severity         @default(MEDIUM)
+  relatedPunchId BigInt?         @map("related_punch_id") @db.UnsignedBigInt
+  note          String?          @db.VarChar(255)
+  status        AnomalyStatus    @default(OPEN)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.DateTime
+
+  org          Org               @relation(fields: [orgId], references: [id])
+  user         User              @relation(fields: [userId], references: [id])
+  relatedPunch AttendancePunch?  @relation(fields: [relatedPunchId], references: [id])
+
+  @@index([orgId, anomalyDate], map: "idx_anom_org_date")
+  @@index([userId, anomalyDate], map: "idx_anom_user_date")
+  @@index([status], map: "idx_anom_status")
+  @@map("attendance_anomalies")
+}
+
+enum AnomalyType {
+  MISSING_IN
+  MISSING_OUT
+  OUT_OF_FENCE
+  VERIFY_FAIL
+  LOCATION_DENIED
+  LATE
+  EARLY_LEAVE
+  OTHER
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AnomalyStatus {
+  OPEN
+  RESOLVED
+  IGNORED
+}
+
+// ============== 申请与审批 ==============
+
+model Request {
+  id            BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId         BigInt           @map("org_id") @db.UnsignedBigInt
+  requesterId   BigInt           @map("requester_id") @db.UnsignedBigInt
+  requestType   RequestType      @map("request_type")
+  title         String?          @db.VarChar(128)
+  reason        String?          @db.Text
+  startAt       DateTime         @map("start_at") @db.DateTime
+  endAt         DateTime         @map("end_at") @db.DateTime
+  durationMinutes Int?           @map("duration_minutes")
+  approvedDurationMinutes Int?   @map("approved_duration_minutes") // 审批后实际批准的时长（分钟）
+  status        RequestStatus    @default(PENDING)
+  leaveCategory String?          @map("leave_category") @db.VarChar(64)
+  destination   String?          @db.VarChar(128)
+  fixPunchDate  DateTime?        @map("fix_punch_date") @db.Date
+  fixPunchType  PunchType?       @map("fix_punch_type")
+  createdAt     DateTime         @default(now()) @map("created_at") @db.DateTime
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.DateTime
+
+  org         Org                 @relation(fields: [orgId], references: [id])
+  requester   User                @relation(fields: [requesterId], references: [id])
+  approvals   RequestApproval[]
+  attachments RequestAttachment[]
+
+  @@index([orgId, status], map: "idx_req_org_status")
+  @@index([requesterId, startAt], map: "idx_req_user_time")
+  @@index([requestType, startAt], map: "idx_req_type_time")
+  @@map("requests")
+}
+
+enum RequestType {
+  LEAVE
+  TRIP
+  FIX_PUNCH
+  OVERTIME
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELED
+}
+
+model RequestApproval {
+  id        BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  requestId BigInt          @map("request_id") @db.UnsignedBigInt
+  stepNo    Int             @map("step_no")
+  approverId BigInt         @map("approver_id") @db.UnsignedBigInt
+  decision  ApprovalDecision @default(PENDING)
+  comment   String?         @db.VarChar(500)
+  decidedAt DateTime?       @map("decided_at") @db.DateTime
+  createdAt DateTime        @default(now()) @map("created_at") @db.DateTime
+
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approver  User    @relation(fields: [approverId], references: [id])
+
+  @@unique([requestId, stepNo], map: "uk_ra_req_step")
+  @@index([approverId, decision], map: "idx_ra_approver_decision")
+  @@map("request_approvals")
+}
+
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+  TRANSFERRED
+}
+
+model RequestAttachment {
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  requestId     BigInt   @map("request_id") @db.UnsignedBigInt
+  fileName      String   @map("file_name") @db.VarChar(255)
+  fileUrl       String   @map("file_url") @db.VarChar(500)
+  mimeType      String?  @map("mime_type") @db.VarChar(128)
+  fileSizeBytes BigInt?  @map("file_size_bytes") @db.UnsignedBigInt
+  uploadedBy    BigInt   @map("uploaded_by") @db.UnsignedBigInt
+  uploadedAt    DateTime @default(now()) @map("uploaded_at") @db.DateTime
+
+  request    Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploader   User    @relation(fields: [uploadedBy], references: [id])
+
+  @@index([requestId], map: "idx_att_req")
+  @@map("request_attachments")
+}
+
+// ============== 审计日志 ==============
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orgId       BigInt   @map("org_id") @db.UnsignedBigInt
+  actorUserId BigInt?  @map("actor_user_id") @db.UnsignedBigInt
+  action      String   @db.VarChar(64)
+  targetType  String?  @map("target_type") @db.VarChar(64)
+  targetId    BigInt?  @map("target_id") @db.UnsignedBigInt
+  detail      Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime
+
+  org      Org  @relation(fields: [orgId], references: [id])
+  actor    User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([orgId, createdAt], map: "idx_audit_org_time")
+  @@index([actorUserId], map: "idx_audit_actor")
+  @@map("audit_logs")
+}
+

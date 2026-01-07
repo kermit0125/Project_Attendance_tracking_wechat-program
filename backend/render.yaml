@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: attendance-api
+    env: node
+    region: singapore  # 可选: singapore, oregon, frankfurt
+    plan: free
+    buildCommand: npm install && npm run prisma:generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false  # 需要在 Render 控制台手动设置
+      - key: JWT_SECRET
+        generateValue: true  # Render 会自动生成随机值
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_MAX
+        value: 100
+      - key: RATE_LIMIT_TIME_WINDOW
+        value: 60000
+
