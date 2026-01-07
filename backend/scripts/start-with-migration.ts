@@ -103,14 +103,36 @@ async function main() {
         // 如果设置了 AUTO_FIX_DB，尝试使用 db push
         if (process.env.AUTO_FIX_DB === 'true') {
           console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
-          const pushResult = await runCommand('npx prisma db push --skip-generate', backendDir);
+          
+          // 先尝试重置失败的迁移，然后使用 db push
+          console.log('   步骤 1: 尝试重置失败的迁移状态...');
+          const resetResult = await runCommand('npx prisma migrate resolve --rolled-back 20260107211017_attendance_api', backendDir);
+          if (resetResult.success) {
+            console.log('   ✅ 迁移状态已重置');
+          } else {
+            console.log('   ⚠️  无法重置迁移状态（可能迁移不存在），继续使用 db push...');
+          }
+          
+          console.log('   步骤 2: 使用 db push 创建表结构...');
+          const pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate', backendDir);
           
           if (pushResult.success) {
             console.log('✅ 数据库表创建成功（使用 db push）');
             console.log('⚠️  注意：db push 不会记录迁移历史');
           } else {
-            console.error('❌ db push 也失败了');
-            console.error('   错误:', pushResult.error?.stderr || pushResult.error?.stdout);
+            const pushError = pushResult.error?.stderr || pushResult.error?.stdout || '';
+            console.error('❌ db push 失败');
+            console.error('   错误:', pushError);
+            
+            // 检查是否是 schema 问题
+            if (pushError.includes('Invalid default value') || pushError.includes('created_at')) {
+              console.error('\n   检测到 schema 问题，可能是 MySQL 版本兼容性问题');
+              console.error('   解决方案：');
+              console.error('   1. 检查 Prisma schema 中的时间字段类型');
+              console.error('   2. 确保使用 @db.Timestamp 而不是 @db.DateTime（对于有默认值的字段）');
+              console.error('   3. 或者移除 @default(now())，在应用层处理');
+            }
+            
             process.exit(1);
           }
         } else {
@@ -130,14 +152,33 @@ async function main() {
         // 如果设置了 AUTO_FIX_DB 环境变量，尝试使用 db push 自动修复
         if (process.env.AUTO_FIX_DB === 'true') {
           console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
-          const pushResult = await runCommand('npx prisma db push --skip-generate', backendDir);
+          
+          // 先尝试重置失败的迁移
+          console.log('   步骤 1: 尝试重置失败的迁移状态...');
+          const resetResult = await runCommand('npx prisma migrate resolve --rolled-back 20260107211017_attendance_api', backendDir);
+          if (resetResult.success) {
+            console.log('   ✅ 迁移状态已重置');
+          } else {
+            console.log('   ⚠️  无法重置迁移状态，继续使用 db push...');
+          }
+          
+          console.log('   步骤 2: 使用 db push 创建表结构...');
+          const pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate', backendDir);
           
           if (pushResult.success) {
             console.log('✅ 数据库表创建成功（使用 db push）');
             console.log('⚠️  注意：db push 不会记录迁移历史，建议后续重新创建正确的迁移');
           } else {
+            const pushError = pushResult.error?.stderr || pushResult.error?.stdout || '';
             console.error('❌ db push 也失败了');
-            console.error('   请手动在 Render Shell 中运行: npx prisma db push');
+            console.error('   错误:', pushError);
+            
+            // 检查是否是 schema 问题
+            if (pushError.includes('Invalid default value') || pushError.includes('created_at')) {
+              console.error('\n   检测到 schema 问题，可能是 MySQL 版本兼容性问题');
+              console.error('   请检查 Prisma schema 中的时间字段类型');
+            }
+            
             process.exit(1);
           }
         } else {
@@ -185,19 +226,39 @@ async function main() {
       // 如果设置了 AUTO_FIX_DB 环境变量，尝试使用 db push 自动修复
       if (process.env.AUTO_FIX_DB === 'true') {
         console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
+        
         try {
-          const pushResult = await runCommand('npx prisma db push --skip-generate', backendDir);
+          // 先尝试重置失败的迁移
+          console.log('   步骤 1: 尝试重置失败的迁移状态...');
+          const resetResult = await runCommand('npx prisma migrate resolve --rolled-back 20260107211017_attendance_api', backendDir);
+          if (resetResult.success) {
+            console.log('   ✅ 迁移状态已重置');
+          } else {
+            console.log('   ⚠️  无法重置迁移状态，继续使用 db push...');
+          }
+          
+          console.log('   步骤 2: 使用 db push 创建表结构...');
+          const pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate', backendDir);
           
           if (pushResult.success) {
             console.log('✅ 数据库表创建成功（使用 db push）');
             console.log('⚠️  注意：db push 不会记录迁移历史，建议后续重新创建正确的迁移');
           } else {
+            const pushError = pushResult.error?.stderr || pushResult.error?.stdout || '';
             console.error('❌ db push 也失败了');
-            console.error('   请手动在 Render Shell 中运行: npx prisma db push');
+            console.error('   错误:', pushError);
+            
+            // 检查是否是 schema 问题
+            if (pushError.includes('Invalid default value') || pushError.includes('created_at')) {
+              console.error('\n   检测到 schema 问题，可能是 MySQL 版本兼容性问题');
+              console.error('   请检查 Prisma schema 中的时间字段类型');
+            }
+            
             process.exit(1);
           }
-        } catch (pushError) {
+        } catch (pushError: any) {
           console.error('❌ db push 执行失败');
+          console.error('   错误:', pushError?.message || String(pushError));
           process.exit(1);
         }
       } else {
