@@ -31,7 +31,34 @@ async function main() {
     process.exit(1);
   });
 
-  const backendDir = path.resolve(__dirname, '..');
+  // 计算 backend 目录
+  // 脚本可能的位置：
+  // 1. dist/scripts/start-with-migration.js (生产环境，编译后)
+  // 2. scripts/start-with-migration.ts (开发环境)
+  const scriptDir = __dirname;
+  console.log(`🔍 脚本目录: ${scriptDir}`);
+  
+  let backendDir: string;
+  if (scriptDir.includes(path.join('dist', 'scripts')) || scriptDir.includes('dist\\scripts')) {
+    // 编译后的路径：dist/scripts -> 回到 backend 根目录
+    // __dirname = /path/to/backend/dist/scripts
+    // 需要回到 /path/to/backend
+    backendDir = path.resolve(scriptDir, '../..');
+  } else {
+    // 开发环境：scripts -> backend
+    backendDir = path.resolve(scriptDir, '..');
+  }
+  
+  // 验证 backendDir 是否正确（应该包含 package.json）
+  const packageJsonPath = path.join(backendDir, 'package.json');
+  const fs = require('fs');
+  if (!fs.existsSync(packageJsonPath)) {
+    console.error(`❌ 无法找到 package.json 在: ${backendDir}`);
+    console.error(`   请检查路径计算逻辑`);
+    process.exit(1);
+  }
+  
+  console.log(`📁 后端目录: ${backendDir}`);
   
   console.log('🚀 开始启动应用...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -209,7 +236,11 @@ async function main() {
   
   // 4. 启动应用
   const { spawn } = require('child_process');
-  const app = spawn('node', ['dist/app.js'], {
+  // 确定 app.js 的路径
+  const appJsPath = path.join(backendDir, 'dist', 'app.js');
+  console.log(`\n📂 启动应用: ${appJsPath}`);
+  
+  const app = spawn('node', [appJsPath], {
     cwd: backendDir,
     stdio: 'inherit',
     env: process.env,
