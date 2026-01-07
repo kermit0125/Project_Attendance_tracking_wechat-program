@@ -80,28 +80,45 @@ async function main() {
   // 2. 应用数据库迁移
   console.log('\n2️⃣ 应用数据库迁移...');
   console.log(`   数据库 URL: ${process.env.DATABASE_URL ? '已设置' : '❌ 未设置'}`);
+  console.log(`   AUTO_FIX_DB: ${process.env.AUTO_FIX_DB || '未设置'}`);
   
   try {
     const migrateResult = await runCommand('npx prisma migrate deploy', backendDir);
     
     if (!migrateResult.success) {
+      // 收集所有可能的错误信息
       const errorOutput = migrateResult.error?.stderr || migrateResult.error?.stdout || '';
+      const errorMessage = migrateResult.error?.message || '';
+      const fullError = `${errorOutput}\n${errorMessage}`;
+      
+      console.log('\n🔍 调试信息:');
+      console.log(`   AUTO_FIX_DB=${process.env.AUTO_FIX_DB}`);
+      console.log(`   错误输出长度: ${errorOutput.length}`);
+      console.log(`   错误消息长度: ${errorMessage.length}`);
       
       // 首先检查是否是迁移失败错误（P3009 或 P3018）- 优先级最高
       const isMigrationFailedError = 
-        errorOutput.includes('P3009') ||
-        errorOutput.includes('P3018') ||
-        errorOutput.includes('failed migrations') ||
-        errorOutput.includes('migrate resolve') ||
-        errorOutput.includes('Invalid use of NULL value') ||
-        (errorOutput.includes('migration started at') && errorOutput.includes('failed'));
+        fullError.includes('P3009') ||
+        fullError.includes('P3018') ||
+        fullError.includes('failed migrations') ||
+        fullError.includes('migrate resolve') ||
+        fullError.includes('Invalid use of NULL value') ||
+        fullError.includes('Database error code: 1138') ||
+        (fullError.includes('migration started at') && fullError.includes('failed'));
       
       if (isMigrationFailedError) {
         console.error('\n❌ 数据库迁移失败：迁移执行失败');
-        console.error('   错误类型:', errorOutput.includes('P3018') ? 'P3018 (迁移失败)' : errorOutput.includes('P3009') ? 'P3009 (迁移状态错误)' : '其他迁移错误');
+        console.error('   错误类型:', fullError.includes('P3018') ? 'P3018 (迁移失败)' : fullError.includes('P3009') ? 'P3009 (迁移状态错误)' : '其他迁移错误');
+        console.error('   错误详情:', fullError.substring(0, 500)); // 只显示前500个字符
         
         // 自动使用 db push 修复（如果设置了 AUTO_FIX_DB 或检测到 NULL 值错误）
-        const shouldAutoFix = process.env.AUTO_FIX_DB === 'true' || errorOutput.includes('Invalid use of NULL value');
+        const hasNullValueError = fullError.includes('Invalid use of NULL value') || fullError.includes('Database error code: 1138');
+        const shouldAutoFix = process.env.AUTO_FIX_DB === 'true' || hasNullValueError;
+        
+        console.log(`\n🔍 自动修复判断:`);
+        console.log(`   AUTO_FIX_DB=${process.env.AUTO_FIX_DB}`);
+        console.log(`   检测到 NULL 值错误: ${hasNullValueError}`);
+        console.log(`   应该自动修复: ${shouldAutoFix}`);
         
         if (shouldAutoFix) {
           console.log('\n🔧 自动修复迁移问题...');
@@ -161,21 +178,26 @@ async function main() {
           console.error('   解决方案：');
           console.error('   1. 设置环境变量 AUTO_FIX_DB=true 以自动使用 db push 修复');
           console.error('   2. 或者手动解决迁移问题（需要 Shell 访问）');
-          console.error('\n   错误详情:', errorOutput);
+          console.error('\n   错误详情:', fullError.substring(0, 1000));
           process.exit(1);
         }
       } else {
         // 检查是否是表不存在错误
         const isTableNotExistError = 
-          errorOutput.includes('does not exist') || 
-          (errorOutput.includes('Table') && errorOutput.includes('doesn\'t exist'));
+          fullError.includes('does not exist') || 
+          (fullError.includes('Table') && fullError.includes('doesn\'t exist'));
         
         if (isTableNotExistError) {
         console.error('\n❌ 数据库迁移失败：表不存在');
         console.error('   这表明数据库是全新的，但迁移文件可能不完整');
         
         // 自动使用 db push 修复（如果设置了 AUTO_FIX_DB）
-        if (process.env.AUTO_FIX_DB === 'true') {
+        const shouldAutoFixTable = process.env.AUTO_FIX_DB === 'true';
+        console.log(`\n🔍 自动修复判断（表不存在）:`);
+        console.log(`   AUTO_FIX_DB=${process.env.AUTO_FIX_DB}`);
+        console.log(`   应该自动修复: ${shouldAutoFixTable}`);
+        
+        if (shouldAutoFixTable) {
           console.log('\n🔧 检测到 AUTO_FIX_DB=true，尝试使用 db push 自动修复...');
           
           // 先尝试重置失败的迁移
@@ -221,27 +243,56 @@ async function main() {
           console.error('   1. 在 Render Shell 中运行: npx prisma db push');
           console.error('   2. 或者设置环境变量 AUTO_FIX_DB=true 以自动修复（不推荐用于生产）');
           console.error('   3. 或者检查迁移文件是否包含创建表的语句');
-          console.error('\n   错误详情:', errorOutput);
+          console.error('\n   错误详情:', fullError.substring(0, 1000));
           process.exit(1);
         }
       } else {
         // 检查是否是数据库连接错误
           const isConnectionError = 
-            errorOutput.includes('Can\'t reach database') ||
-            errorOutput.includes('Connection') ||
-            errorOutput.includes('ECONNREFUSED') ||
-            errorOutput.includes('ENOTFOUND');
+            fullError.includes('Can\'t reach database') ||
+            fullError.includes('Connection') ||
+            fullError.includes('ECONNREFUSED') ||
+            fullError.includes('ENOTFOUND');
           
           if (isConnectionError) {
             console.error('\n❌ 数据库连接失败！');
             console.error('   请检查 DATABASE_URL 环境变量是否正确设置');
-            console.error('   错误详情:', errorOutput);
+            console.error('   错误详情:', fullError.substring(0, 500));
             process.exit(1);
           } else {
-            console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
-            console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
-            console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
-            console.warn('\n   错误详情:', errorOutput);
+            // 如果设置了 AUTO_FIX_DB，即使不是明确的迁移错误，也尝试自动修复
+            if (process.env.AUTO_FIX_DB === 'true') {
+              console.warn('\n⚠️  数据库迁移失败，但检测到 AUTO_FIX_DB=true，尝试自动修复...');
+              console.log('   步骤 1: 尝试重置失败的迁移状态...');
+              const resetResult = await runCommand('npx prisma migrate resolve --rolled-back 20260107211017_attendance_api', backendDir);
+              if (resetResult.success) {
+                console.log('   ✅ 迁移状态已重置');
+              } else {
+                console.log('   ⚠️  无法重置迁移状态，继续使用 db push...');
+              }
+              
+              console.log('   步骤 2: 使用 db push 同步数据库结构...');
+              const pushResult = await runCommand('npx prisma db push --accept-data-loss --skip-generate', backendDir);
+              
+              if (pushResult.success) {
+                console.log('✅ 数据库表同步成功（使用 db push）');
+                console.log('   步骤 3: 标记迁移为已应用...');
+                const markResult = await runCommand('npx prisma migrate resolve --applied 20260107211017_attendance_api', backendDir);
+                if (markResult.success) {
+                  console.log('   ✅ 迁移已标记为已应用');
+                }
+                console.log('⚠️  注意：使用了 db push 同步数据库');
+              } else {
+                console.warn('⚠️  db push 失败，但继续启动应用...');
+                console.warn('   错误:', (pushResult.error?.stderr || pushResult.error?.stdout || '').substring(0, 500));
+              }
+            } else {
+              console.warn('\n⚠️  数据库迁移失败，但继续启动应用...');
+              console.warn('   这可能是正常的（迁移已应用），或者请检查数据库连接');
+              console.warn('   如果是首次部署，请确保 DATABASE_URL 环境变量已正确设置');
+              console.warn('   如需自动修复，设置环境变量 AUTO_FIX_DB=true');
+              console.warn('\n   错误详情:', fullError.substring(0, 500));
+            }
           }
         }
       }
@@ -378,13 +429,23 @@ async function main() {
   const { spawn } = require('child_process');
   // fs 已经在上面声明过了，不需要重复声明
   
-  // 确定 app.js 的路径
-  const appJsPath = path.join(backendDir, 'dist', 'app.js');
-  console.log(`\n📂 启动应用: ${appJsPath}`);
+  // 确定 app.js 的路径（检查多个可能的位置）
+  const possiblePaths = [
+    path.join(backendDir, 'dist', 'app.js'),      // 标准位置：dist/app.js
+    path.join(backendDir, 'dist', 'src', 'app.js'), // 如果 rootDir 设置错误：dist/src/app.js
+  ];
   
-  // 检查文件是否存在
-  if (!fs.existsSync(appJsPath)) {
-    console.error(`\n❌ 应用文件不存在: ${appJsPath}`);
+  let appJsPath: string | null = null;
+  for (const possiblePath of possiblePaths) {
+    if (fs.existsSync(possiblePath)) {
+      appJsPath = possiblePath;
+      break;
+    }
+  }
+  
+  if (!appJsPath) {
+    console.error(`\n❌ 应用文件不存在，检查了以下位置:`);
+    possiblePaths.forEach(p => console.error(`   - ${p}`));
     console.error('   请检查构建是否成功');
     console.error(`   当前工作目录: ${process.cwd()}`);
     console.error(`   后端目录: ${backendDir}`);
@@ -394,12 +455,22 @@ async function main() {
     if (fs.existsSync(distDir)) {
       console.error(`\n   dist 目录内容:`);
       try {
-        const files = fs.readdirSync(distDir);
-        files.forEach((file: string) => {
-          const filePath = path.join(distDir, file);
-          const stat = fs.statSync(filePath);
-          console.error(`     ${stat.isDirectory() ? '📁' : '📄'} ${file}`);
-        });
+        const listDir = (dir: string, indent: string = '') => {
+          const files = fs.readdirSync(dir);
+          files.forEach((file: string) => {
+            const filePath = path.join(dir, file);
+            const stat = fs.statSync(filePath);
+            console.error(`${indent}${stat.isDirectory() ? '📁' : '📄'} ${file}`);
+            if (stat.isDirectory() && file !== 'node_modules') {
+              try {
+                listDir(filePath, indent + '  ');
+              } catch (e) {
+                // 忽略无法读取的目录
+              }
+            }
+          });
+        };
+        listDir(distDir);
       } catch (e: any) {
         console.error(`   无法读取 dist 目录: ${e.message}`);
       }
@@ -409,6 +480,8 @@ async function main() {
     
     process.exit(1);
   }
+  
+  console.log(`\n📂 启动应用: ${appJsPath}`);
   
   const app = spawn('node', [appJsPath], {
     cwd: backendDir,
