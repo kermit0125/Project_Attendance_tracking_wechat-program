@@ -39,7 +39,7 @@ export class GeoFenceController {
         lat: number;
         lng: number;
         radiusM: number;
-        description?: string;
+        address?: string;
       };
     }>,
     reply: FastifyReply
@@ -52,7 +52,7 @@ export class GeoFenceController {
       lat: body.lat,
       lng: body.lng,
       radiusM: body.radiusM,
-      description: body.description,
+      address: body.address,
     });
 
     return reply.send({
@@ -73,7 +73,7 @@ export class GeoFenceController {
         lat?: number;
         lng?: number;
         radiusM?: number;
-        description?: string;
+        address?: string;
         isActive?: boolean;
       };
     }>,
